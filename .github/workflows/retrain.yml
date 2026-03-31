@@ -1,0 +1,96 @@
+name: Monthly Retrain
+
+on:
+  # Monthly schedule — 1st of each month at 00:00 UTC
+  schedule:
+    - cron: '0 0 1 * *'
+
+  # On data push
+  push:
+    branches: [main]
+    paths:
+      - 'data/raw/**'
+      - 'data/processed/**'
+
+  # Manual dispatch
+  workflow_dispatch:
+    inputs:
+      max_trials:
+        description: 'Max hyperparameter tuning trials'
+        required: false
+        default: '30'
+      epochs:
+        description: 'Training epochs'
+        required: false
+        default: '150'
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360   # 6-hour timeout for long training
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ── Step 1: Re-tune Hyperparameters ──
+      - name: Hyperparameter tuning
+        run: |
+          python -m src.tune \
+            --monthly-csv data/processed/monthly_hotspot_sum.csv \
+            --output-json configs/best_hyperparameters.json \
+            --max-trials ${{ github.event.inputs.max_trials || '30' }} \
+            --tuning-epochs 50 \
+            --batch-size 16
+
+      # ── Step 2: Train All Tile Models ──
+      - name: Train models
+        run: |
+          python -m src.train \
+            --monthly-csv data/processed/monthly_hotspot_sum.csv \
+            --hyperparams configs/best_hyperparameters.json \
+            --models-dir models \
+            --epochs ${{ github.event.inputs.epochs || '150' }} \
+            --batch-size 16 \
+            --patience 20
+
+      # ── Step 3: Generate Forecasts ──
+      - name: Generate forecasts
+        run: |
+          YEAR=$(date +%Y)
+          python -m src.forecast \
+            --monthly-csv data/processed/monthly_hotspot_sum.csv \
+            --models-dir models \
+            --output-dir data/forecasts \
+            --year $YEAR \
+            --months 12
+
+      # ── Step 4: Commit Results ──
+      - name: Commit and push results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add configs/best_hyperparameters.json
+          git add models/
+          git add data/forecasts/
+          git diff --cached --quiet || git commit -m "ci: retrain models and update forecasts [$(date +%Y-%m-%d)]"
+          git push
