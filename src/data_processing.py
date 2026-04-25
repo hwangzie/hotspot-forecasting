@@ -92,13 +92,13 @@ def create_monthly_hotspot_data(daily_csv, output_csv):
 
 def main():
     parser = argparse.ArgumentParser(description='Data Processing Pipeline')
-    parser.add_argument('--raw-csv', type=str, default='data/raw/perlu_diolah_untukTA.csv',
+    parser.add_argument('--raw-csv', type=str, default='./data/raw/perlu_diolah_untukTA.csv',
                         help='Path to raw hotspot CSV')
-    parser.add_argument('--tile-csv', type=str, default='data/processed/pontianak_tile_boundaries.csv',
+    parser.add_argument('--tile-csv', type=str, default='./data/processed/pontianak_tile_boundaries.csv',
                         help='Path to tile boundaries CSV')
-    parser.add_argument('--daily-output', type=str, default='data/processed/daily_hotspot_mapping_2014_2024.csv',
+    parser.add_argument('--daily-output', type=str, default='./data/processed/daily_hotspot_mapping_2014_2024.csv',
                         help='Output path for daily mapping')
-    parser.add_argument('--monthly-output', type=str, default='data/processed/monthly_hotspot_sum.csv',
+    parser.add_argument('--monthly-output', type=str, default='./data/processed/monthly_hotspot_sum.csv',
                         help='Output path for monthly aggregation')
     parser.add_argument('--start-year', type=int, default=2014)
     parser.add_argument('--end-year', type=int, default=2024)

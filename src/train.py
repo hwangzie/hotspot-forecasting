@@ -103,14 +103,14 @@ def train_all_tiles(monthly_csv, hyperparams_path, models_dir,
             'epochs_trained': len(history.history['loss']),
         }
 
-        print(f"\n✓ {tile_name} - MSE: {test_loss:.6f}, MAE: {test_mae:.6f}, R²: {test_r2:.6f}")
-        print(f"✓ Model saved to: {model_path}")
+        print(f"\n[OK] {tile_name} - MSE: {test_loss:.6f}, MAE: {test_mae:.6f}, R2: {test_r2:.6f}")
+        print(f"[OK] Model saved to: {model_path}")
 
     # Save results summary
     results_path = os.path.join(models_dir, "training_results.json")
     with open(results_path, 'w') as f:
         json.dump(results, f, indent=2)
-    print(f"\n✓ Training results saved to: {results_path}")
+    print(f"\n[OK] Training results saved to: {results_path}")
     print(f"\n{'=' * 60}")
     print("ALL TRAINING COMPLETE!")
     print(f"{'=' * 60}")

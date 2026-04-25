@@ -44,9 +44,9 @@ class HotspotForecaster:
         self.df.drop('year_month', axis=1, inplace=True)
         self.tile_columns = [col for col in self.df.columns if col.startswith('tile_')]
 
-        print(f"✓ Loaded data: {self.df.shape}")
-        print(f"✓ Date range: {self.df.index.min().strftime('%Y-%m')} to {self.df.index.max().strftime('%Y-%m')}")
-        print(f"✓ Tiles: {len(self.tile_columns)}")
+        print(f"[OK] Loaded data: {self.df.shape}")
+        print(f"[OK] Date range: {self.df.index.min().strftime('%Y-%m')} to {self.df.index.max().strftime('%Y-%m')}")
+        print(f"[OK] Tiles: {len(self.tile_columns)}")
         return self
 
     def transform(self, lookback_months=12):
@@ -81,7 +81,7 @@ class HotspotForecaster:
                 'feature_scaler': feature_scaler,
                 'raw_data': tile_values,
             }
-            print(f"  ✓ {tile_name} processed")
+            print(f"  [OK] {tile_name} processed")
 
         return self
 
@@ -100,16 +100,16 @@ class HotspotForecaster:
                 try:
                     self.models[tile_name] = load_model(
                         str(model_path),
-                        custom_objects={'r_squared': r_squared}
+                        compile=False
                     )
                     loaded += 1
-                    print(f"  ✓ {tile_name}")
+                    print(f"  [OK] {tile_name}")
                 except Exception as e:
-                    print(f"  ✗ {tile_name}: {e}")
+                    print(f"  [FAIL] {tile_name}: {e}")
             else:
-                print(f"  ✗ {tile_name}: not found at {model_path}")
+                print(f"  [FAIL] {tile_name}: not found at {model_path}")
 
-        print(f"\n✓ Loaded {loaded}/{len(self.tile_columns)} models")
+        print(f"\n[OK] Loaded {loaded}/{len(self.tile_columns)} models")
         return self
 
     def _forecast_tile(self, tile_name, model, start_date, months_ahead=12):
@@ -172,14 +172,14 @@ class HotspotForecaster:
         for tile in self.models:
             fc = self._forecast_tile(tile, self.models[tile], start_date, months_ahead)
             all_fc[tile] = fc
-            print(f"  ✓ {tile}: total={fc.sum():.2f}, avg={fc.mean():.2f}")
+            print(f"  [OK] {tile}: total={fc.sum():.2f}, avg={fc.mean():.2f}")
 
         df_fc = pd.DataFrame(all_fc, index=months)
         df_fc.index.name = 'year_month'
         df_fc['total'] = df_fc.sum(axis=1)
 
-        print(f"\n✓ Forecasts generated for {len(all_fc)} tiles")
-        print(f"✓ Total predicted hotspots: {df_fc['total'].sum():.2f}")
+        print(f"\n[OK] Forecasts generated for {len(all_fc)} tiles")
+        print(f"[OK] Total predicted hotspots: {df_fc['total'].sum():.2f}")
         return df_fc
 
     def save_results(self, forecast_df, year=2025):
@@ -190,7 +190,7 @@ class HotspotForecaster:
 
         out_csv = self.output_dir / f"monthly_hotspot_forecasts_{year}.csv"
         forecast_df.to_csv(out_csv)
-        print(f"✓ Saved forecasts to: {out_csv}")
+        print(f"[OK] Saved forecasts to: {out_csv}")
 
         summary = {
             'forecast_year': year,
@@ -212,7 +212,7 @@ class HotspotForecaster:
         summary_path = self.output_dir / f"forecast_summary_{year}.json"
         with open(summary_path, 'w') as f:
             json.dump(summary, f, indent=2)
-        print(f"✓ Saved summary to: {summary_path}")
+        print(f"[OK] Saved summary to: {summary_path}")
 
         print("\n" + "=" * 60)
         print("FORECAST PIPELINE COMPLETED SUCCESSFULLY!")
