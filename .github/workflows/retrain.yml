@@ -11,6 +11,8 @@ on:
     paths:
       - 'data/raw/**'
       - 'data/processed/**'
+permissions:
+  contents: write
 
   # Manual dispatch
   workflow_dispatch:
