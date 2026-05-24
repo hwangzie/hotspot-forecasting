@@ -28,6 +28,8 @@ jobs:
   retrain:
     runs-on: ubuntu-latest
     timeout-minutes: 360   # 6-hour timeout for long training
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -92,5 +94,7 @@ jobs:
           git add configs/best_hyperparameters.json
           git add models/
           git add data/forecasts/
+          git add data/processed/monthly_hotspot_sum.csv || true
+          git add monthly_hotspot_sum.csv || true
           git diff --cached --quiet || git commit -m "ci: retrain models and update forecasts [$(date +%Y-%m-%d)]"
           git push

@@ -62,7 +62,7 @@ def create_daily_hotspot_mapping(raw_csv, tile_csv, output_csv, start_year=2014,
 
     result_df = pd.DataFrame(result_data)
     result_df.to_csv(output_csv, index=False)
-    print(f"✓ Saved daily mapping to: {output_csv} (shape: {result_df.shape})")
+    print(f"OK: Saved daily mapping to: {output_csv} (shape: {result_df.shape})")
     return result_df
 
 
@@ -86,7 +86,7 @@ def create_monthly_hotspot_data(daily_csv, output_csv):
     monthly_df = monthly_df.sort_values('year_month')
 
     monthly_df.to_csv(output_csv, index=False)
-    print(f"✓ Saved monthly data to: {output_csv} ({len(monthly_df)} months)")
+    print(f"OK: Saved monthly data to: {output_csv} ({len(monthly_df)} months)")
     return monthly_df
 
 
@@ -120,7 +120,7 @@ def main():
         output_csv=args.monthly_output
     )
 
-    print("\n✓ Data processing complete!")
+    print("\nOK: Data processing complete!")
 
 
 if __name__ == '__main__':

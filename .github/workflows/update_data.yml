@@ -1,0 +1,130 @@
+name: Update Hotspot Data
+
+on:
+  # Run every Monday at 01:00 UTC (08:00 WIB)
+  schedule:
+    - cron: '0 1 * * 1'
+
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Download start date (YYYY-MM-DD). Leave blank for 2025-01-01.'
+        required: false
+        default: '2025-01-01'
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pandas
+
+      - name: Download & merge new hotspot data
+        env:
+          FIRMS_API_KEY: ${{ secrets.FIRMS_API_KEY }}
+        run: |
+          python - <<'EOF'
+          import sys, os, shutil
+          from pathlib import Path
+          from datetime import date, timedelta
+          import time, requests, pandas as pd
+          from io import StringIO
+
+          ROOT       = Path('.')
+          RAW_CSV    = ROOT / 'data' / 'raw' / 'perlu_diolah_untukTA.csv'
+          TILE_CSV   = ROOT / 'pontianak_tile_boundaries.csv'
+          DAILY_OUT  = ROOT / 'data' / 'processed' / 'daily_hotspot_mapping_2014_now.csv'
+          MONTHLY_P  = ROOT / 'data' / 'processed' / 'monthly_hotspot_sum.csv'
+          MONTHLY_R  = ROOT / 'monthly_hotspot_sum.csv'
+
+          MAP_KEY    = os.environ['FIRMS_API_KEY']
+          W,S,E,N    = 109.0, -1.5, 110.5, 0.5
+          START      = date(2025, 1, 1)
+          END        = date.today()
+          SATS       = ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'MODIS_NRT']
+
+          def fetch(sat, start, end):
+              frames = []
+              cs = start
+              while cs <= end:
+                  ce   = min(cs + timedelta(days=4), end)
+                  days = (ce - cs).days + 1
+                  url  = (f"https://firms.modaps.eosdis.nasa.gov/api/area/csv"
+                          f"/{MAP_KEY}/{sat}/{W},{S},{E},{N}/{days}/{cs:%Y-%m-%d}")
+                  try:
+                      r = requests.get(url, timeout=30)
+                      if r.status_code == 200 and len(r.text) > 50:
+                          frames.append(pd.read_csv(StringIO(r.text)))
+                  except Exception as e:
+                      print(f"  WARNING: {e}")
+                  cs = ce + timedelta(days=1)
+                  time.sleep(0.4)
+              return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+          all_new = []
+          for sat in SATS:
+              print(f"Fetching {sat}...")
+              df = fetch(sat, START, END)
+              if not df.empty and 'acq_date' in df.columns:
+                  out = pd.DataFrame()
+                  out['Tanggal']   = pd.to_datetime(df['acq_date']).dt.strftime('%d-%m-%Y')
+                  out['Latitude']  = df['latitude']
+                  out['Longitude'] = df['longitude']
+                  all_new.append(out)
+
+          if all_new:
+              new_data = pd.concat(all_new, ignore_index=True)
+              new_data.drop_duplicates(subset=['Tanggal','Latitude','Longitude'], inplace=True)
+              existing = pd.read_csv(RAW_CSV)
+              merged   = pd.concat([existing, new_data[['Tanggal','Latitude','Longitude']]], ignore_index=True)
+              merged.drop_duplicates(subset=['Tanggal','Latitude','Longitude'], inplace=True)
+              merged.sort_values('Tanggal', inplace=True)
+              added = len(merged) - len(existing)
+              merged.to_csv(RAW_CSV, index=False)
+              print(f"Added {added} new rows. Total: {len(merged)}")
+          else:
+              print("No new data downloaded.")
+
+          # Rebuild aggregations
+          sys.path.insert(0, str(ROOT / 'src'))
+          from data_processing import create_daily_hotspot_mapping, create_monthly_hotspot_data
+          DAILY_OUT.parent.mkdir(parents=True, exist_ok=True)
+          create_daily_hotspot_mapping(str(RAW_CSV), str(TILE_CSV), str(DAILY_OUT), 2014, END.year)
+          create_monthly_hotspot_data(str(DAILY_OUT), str(MONTHLY_P))
+          shutil.copy2(MONTHLY_P, MONTHLY_R)
+          print("monthly_hotspot_sum.csv updated.")
+          EOF
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/perlu_diolah_untukTA.csv
+          git add data/processed/daily_hotspot_mapping_2014_now.csv
+          git add data/processed/monthly_hotspot_sum.csv
+          git add monthly_hotspot_sum.csv
+          git diff --cached --quiet || git commit -m "ci: update hotspot data [$(date +%Y-%m-%d)]"
+          git push
