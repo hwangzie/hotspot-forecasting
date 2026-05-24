@@ -33,6 +33,12 @@ def create_daily_hotspot_mapping(raw_csv, tile_csv, output_csv, start_year=2014,
 
     print("Loading hotspot data...")
     hotspots_df = pd.read_csv(raw_csv)
+
+    # Normalize column names to title-case so the function works regardless
+    # of whether a previous step saved them as lowercase or mixed-case.
+    col_map = {c: c.strip().title() for c in hotspots_df.columns}
+    hotspots_df.rename(columns=col_map, inplace=True)
+
     hotspots_df['Tanggal'] = pd.to_datetime(hotspots_df['Tanggal'], format='%d-%m-%Y')
 
     start_date = pd.Timestamp(start_year, 1, 1)
