@@ -35,10 +35,7 @@ W, S, E, N = 109.0, -1.5, 110.5, 0.5   # lon_min, lat_min, lon_max, lat_max
 START_DATE = date(2025, 1, 1)
 END_DATE   = date.today()
 
-# Satellites to query (VIIRS has better resolution than MODIS)
 SATELLITES = [
-    "VIIRS_SNPP_NRT",
-    "VIIRS_NOAA20_NRT",
     "MODIS_NRT",
 ]
 # ────────────────────────────────────────────────────────────────────────────
