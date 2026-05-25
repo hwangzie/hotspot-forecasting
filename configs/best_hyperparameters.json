@@ -1,7 +1,7 @@
 {
   "n_lstm_layers": 1,
   "lstm_units": [
-    96
+    256
   ],
   "dropout_rates": [
     0.5
@@ -13,5 +13,5 @@
   "add_dense_layer": false,
   "dense_units": null,
   "dense_dropout": null,
-  "learning_rate": 8.783225217693639e-05
+  "learning_rate": 1e-05
 }
