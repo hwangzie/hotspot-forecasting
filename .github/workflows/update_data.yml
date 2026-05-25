@@ -74,7 +74,7 @@ jobs:
           else:
               W,S,E,N = 109.0, -1.5, 110.5, 0.5
               END     = date.today()
-              SATS    = ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'MODIS_NRT']
+              SATS    = ['MODIS_NRT']
 
               # Auto-detect start: day after the latest date already in the CSV.
               # Falls back to the workflow input / hardcoded default only when needed.
