@@ -34,12 +34,47 @@ def create_daily_hotspot_mapping(raw_csv, tile_csv, output_csv, start_year=2014,
     print("Loading hotspot data...")
     hotspots_df = pd.read_csv(raw_csv)
 
-    # Normalize column names to title-case so the function works regardless
-    # of whether a previous step saved them as lowercase or mixed-case.
-    col_map = {c: c.strip().title() for c in hotspots_df.columns}
-    hotspots_df.rename(columns=col_map, inplace=True)
+    # ── Normalize column names ────────────────────────────────────────────────
+    # Build a case-insensitive lookup so the function works regardless of
+    # whether a previous pipeline step saved headers as lowercase, Title-case,
+    # or mixed-case (e.g. 'tanggal', 'Tanggal', 'TANGGAL').
+    col_lower = {c.strip().lower(): c for c in hotspots_df.columns}
 
-    hotspots_df['Tanggal'] = pd.to_datetime(hotspots_df['Tanggal'], format='%d-%m-%Y')
+    rename_map = {}
+    for target, aliases in {
+        'Tanggal':   ['tanggal'],
+        'Latitude':  ['latitude'],
+        'Longitude': ['longitude'],
+    }.items():
+        for alias in aliases:
+            if alias in col_lower and col_lower[alias] != target:
+                rename_map[col_lower[alias]] = target
+
+    if rename_map:
+        hotspots_df.rename(columns=rename_map, inplace=True)
+
+    if 'Tanggal' not in hotspots_df.columns:
+        raise KeyError(
+            f"Cannot find a date column in the raw CSV. "
+            f"Available columns: {list(hotspots_df.columns)}"
+        )
+
+    # ── Parse dates ──────────────────────────────────────────────────────────
+    # The original dataset uses DD-MM-YYYY; data downloaded from the FIRMS API
+    # uses YYYY-MM-DD.  Try strict format first, fall back to pandas inference.
+    try:
+        hotspots_df['Tanggal'] = pd.to_datetime(
+            hotspots_df['Tanggal'], format='%d-%m-%Y'
+        )
+    except (ValueError, TypeError):
+        try:
+            hotspots_df['Tanggal'] = pd.to_datetime(
+                hotspots_df['Tanggal'], format='%Y-%m-%d'
+            )
+        except (ValueError, TypeError):
+            hotspots_df['Tanggal'] = pd.to_datetime(
+                hotspots_df['Tanggal'], infer_datetime_format=True, dayfirst=True
+            )
 
     start_date = pd.Timestamp(start_year, 1, 1)
     end_date = pd.Timestamp(end_year, 12, 31)
