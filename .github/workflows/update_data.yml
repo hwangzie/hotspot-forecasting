@@ -73,9 +73,26 @@ jobs:
               print("Skipping download — rebuilding aggregations from existing data only.")
           else:
               W,S,E,N = 109.0, -1.5, 110.5, 0.5
-              START   = datetime.strptime(os.environ.get('START_DATE', '2025-01-01'), '%Y-%m-%d').date()
               END     = date.today()
               SATS    = ['MODIS_NRT']
+
+              # Auto-detect start: day after the latest date already in the CSV.
+              # Falls back to the workflow input / hardcoded default only when needed.
+              _fallback_start = os.environ.get('START_DATE', '2025-01-01')
+              try:
+                  _existing = pd.read_csv(RAW_CSV)
+                  _col_lower = {c.strip().lower(): c for c in _existing.columns}
+                  _date_col  = _col_lower.get('tanggal')
+                  if _date_col:
+                      _last = pd.to_datetime(_existing[_date_col], dayfirst=True).max().date()
+                      START = _last + timedelta(days=1)
+                      print(f"Auto-detected start date: {START} (day after last record {_last})")
+                  else:
+                      START = datetime.strptime(_fallback_start, '%Y-%m-%d').date()
+                      print(f"Could not find date column; using fallback start: {START}")
+              except Exception as _e:
+                  START = datetime.strptime(_fallback_start, '%Y-%m-%d').date()
+                  print(f"Could not read existing CSV ({_e}); using fallback start: {START}")
 
               def fetch(sat, start, end):
                   frames = []
