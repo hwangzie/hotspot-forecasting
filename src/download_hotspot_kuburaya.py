@@ -29,7 +29,7 @@ OUTPUT_CSV   = str(_ROOT / "data" / "raw" / "hotspot_kuburaya_2025_now.csv")
 MERGED_CSV   = str(_ROOT / "data" / "raw" / "perlu_diolah_untukTA_updated.csv")
 
 # Kubu Raya, Kalimantan Barat bounding box
-W, S, E, N = 109.0, -1.5, 110.5, 0.5   # lon_min, lat_min, lon_max, lat_max
+W, S, E, N = 108.9, -1.0, 110.0, 0.1  # lon_min, lat_min, lon_max, lat_max
 
 # Date range: Jan 1 2025 to today
 START_DATE = date(2025, 1, 1)

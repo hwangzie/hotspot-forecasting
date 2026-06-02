@@ -72,7 +72,7 @@ jobs:
               print("  Value: your NASA FIRMS API key (get one free at https://firms.modaps.eosdis.nasa.gov/api/)")
               print("Skipping download — rebuilding aggregations from existing data only.")
           else:
-              W,S,E,N = 109.0, -1.5, 110.5, 0.5
+              W,S,E,N = 108.9, -1.0, 110.0, 0.1
               END     = date.today()
               SATS    = ['MODIS_NRT']
 
