@@ -126,13 +126,6 @@ def load_real_data():
     historical_df['sumber_data'] = 'Realisasi'
     forecast_df['sumber_data'] = 'prakiraan'
     
-    # Detect the forecast year from the forecast data
-    forecast_year_months = set(forecast_df['year_month'].tolist())
-    
-    # Remove historical rows that overlap with forecast months
-    # (prevents duplicate data when monthly_hotspot_sum.csv includes current year)
-    historical_df = historical_df[~historical_df['year_month'].isin(forecast_year_months)]
-    
     # Combine historical/actual and forecast data
     combined_df = pd.concat([historical_df, forecast_df], ignore_index=True)
     
@@ -218,9 +211,9 @@ def load_real_data():
             # FFMC calculation
             ffmc = max(20, min(95, 60 + (hotspot_count * 2) - (rainfall * 0.1)))
             
-            # Check if this is forecast data with categorical risk
+            # Check if this is 2025 forecast data with categorical risk
             year = date.year
-            if year_month_key in categorical_lookup:
+            if year == 2025 and year_month_key in categorical_lookup:
                 # Use categorical risk from CSV
                 risk_level = categorical_lookup[year_month_key].get(tile_num, 'Rendah')
                 # Assign risk score based on categorical level
@@ -279,7 +272,7 @@ def load_real_data():
 def load_validation_data():
     """Load data realisasi/aktual tahun 2025 untuk validasi"""
     try:
-        # Membaca file CSV data aktual 2025
+        # Membaca file CSV data asli 2025
         val_df = pd.read_csv('real_monthly_hotspot_sum2025.csv')
         
         # Mengubah format data dari lebar (wide) ke panjang (long) agar cocok dengan data forecast
@@ -522,9 +515,9 @@ if page == "Ringkasan Eksekutif":
     mae_value = None
     validation_df_for_chart = load_validation_data()
     if validation_df_for_chart is not None and len(forecast_df) > 0:
-        forecast_chart = df[(df['tanggal'].dt.year == 2025) & (df['sumber_data'] == 'prakiraan')].copy()
+        forecast_2025_chart = df[(df['tanggal'].dt.year == 2025) & (df['sumber_data'] == 'prakiraan')].copy()
         eval_chart_df = pd.merge(
-            forecast_chart,
+            forecast_2025_chart,
             validation_df_for_chart,
             on=['tanggal', 'tile_id'],
             how='inner'
@@ -618,14 +611,14 @@ if page == "Ringkasan Eksekutif":
     
     st.info(f"""
     **Interpretasi Grafik:**
-    - **Garis Biru Solid**: Data real dari pengamatan satelit MODIS/VIIRS
+    - **Garis Biru Solid**: Data real dari pengamatan satelit MODIS/VIIRS (termasuk data aktual 2025)
     - **Garis Oranye Putus-putus**: prakiraan model LSTM untuk periode mendatang{mae_note}
     - Pola musiman terlihat jelas dengan puncak pada bulan-bulan kemarau (Juli-Oktober)
     """)
     
     st.markdown("---")
 
-    st.title("Evaluasi Akurasi Model Forecasting")
+    st.title("Evaluasi Akurasi Model Forecasting (2025)")
     st.markdown("**Perbandingan Data Prakiraan (Forecast) vs Realisasi (Aktual)**")
     
     # 1. Load Data
@@ -634,7 +627,7 @@ if page == "Ringkasan Eksekutif":
     if validation_df is None:
         st.error("File 'real_monthly_hotspot_sum2025.csv' tidak ditemukan. Mohon upload file tersebut.")
     else:
-        # Ambil data forecast (prakiraan) khusus tahun 2025 dari dataset utama (untuk validasi)
+        # Ambil data forecast (prakiraan) khusus tahun 2025 dari dataset utama
         forecast_2025 = df[(df['tanggal'].dt.year == 2025) & (df['sumber_data'] == 'prakiraan')].copy()
         
         # Gabungkan (Merge) data Forecast dan Aktual berdasarkan Tanggal dan Lokasi
@@ -710,22 +703,22 @@ if page == "Ringkasan Eksekutif":
             """)
             
         else:
-            st.warning("Data validasi 2025 tidak ditemukan dalam rentang filter yang dipilih.")
+            st.warning("Data untuk tahun 2025 tidak ditemukan dalam rentang filter yang dipilih.")
 
     # Map visualization
     st.subheader("Peta Distribusi Spasial Titik Panas")
 
     # Month selector for map
     if len(forecast_df) > 0:
-        available_forecast_months = sorted(forecast_df['tanggal'].unique())
+        available_months_2025 = sorted(forecast_df['tanggal'].unique())
         
         col_map1, col_map2 = st.columns([3, 1])
         with col_map2:
             selected_map_month = st.selectbox(
                 "Pilih Bulan:",
-                options=available_forecast_months,
+                options=available_months_2025,
                 format_func=lambda x: x.strftime('%B %Y'),
-                index=len(available_forecast_months)-1
+                index=len(available_months_2025)-1
             )
         
         map_data = forecast_df[forecast_df['tanggal'] == selected_map_month]
@@ -772,12 +765,12 @@ if page == "Ringkasan Eksekutif":
 # PAGE: DETAIL DATA
 # ============================================================================
 elif page == "Detail Data":
-    st.title("Detail Data Prakiraan Titik Panas 2026")
+    st.title("Detail Data Prakiraan Titik Panas 2025")
     st.markdown("**Analisis Detail dan Tabel Data Bulanan**")
     st.markdown("---")
     
     if len(forecast_df) > 0:
-        st.subheader("Ringkasan Bulanan Prakiraan 2026")
+        st.subheader("Ringkasan Bulanan Prakiraan 2025")
         st.info(
             "**Catatan Sumber Data:**\n\n"
             "• **Titik Panas**: Hasil prakiraan model LSTM berdasarkan data historis MODIS/VIIRS 2014-2024\n\n"
@@ -837,7 +830,7 @@ elif page == "Detail Data":
         st.markdown("---")
         
         # Detailed forecast chart
-        st.subheader("Grafik Detail Prakiraan 2026")
+        st.subheader("Grafik Detail Prakiraan 2025")
         
         fig_detail = go.Figure()
         
@@ -855,7 +848,7 @@ elif page == "Detail Data":
         ))
         
         fig_detail.update_layout(
-            title="prakiraan Titik Panas per Bulan (2026)",
+            title="prakiraan Titik Panas per Bulan (2025)",
             xaxis_title="Bulan",
             yaxis_title="Jumlah Titik Panas",
             height=400,
@@ -875,15 +868,15 @@ elif page == "Detail Data":
         }).reset_index()
         
         area_summary = area_summary.sort_values('titik_panas', ascending=False)
-        area_summary.columns = ['Lokasi', 'Total prakiraan Titik Panas (2026)', 'Kategori Risiko Dominan']
-        area_summary['Total prakiraan Titik Panas (2026)'] = area_summary['Total prakiraan Titik Panas (2026)'].round(0).astype(int)
+        area_summary.columns = ['Lokasi', 'Total prakiraan Titik Panas (2025)', 'Kategori Risiko Dominan']
+        area_summary['Total prakiraan Titik Panas (2025)'] = area_summary['Total prakiraan Titik Panas (2025)'].round(0).astype(int)
         
         st.dataframe(area_summary, use_container_width=True, height=400)
         
         
     else:
-        st.warning("Data prakiraan 2026 tidak tersedia. Silakan sesuaikan filter rentang waktu.")
-        st.info("Pilih tahun 2026 pada filter sidebar untuk melihat data prakiraan.")
+        st.warning("Data prakiraan 2025 tidak tersedia. Silakan sesuaikan filter rentang waktu.")
+        st.info("Pilih tahun 2025 pada filter sidebar untuk melihat data prakiraan.")
 
 
 
@@ -896,7 +889,7 @@ st.sidebar.info(
     "**Cakupan Data:**\n"
     "• 25 blok area Kabupaten Kuburaya\n"
     "• Historis: 2020-2024\n"
-    "• prakiraan: 2026\n\n"
+    "• prakiraan: 2025\n\n"
     "**Model:**\n"
     "• LSTM (Long Short-Term Memory)\n"
     "• Training: Data 2014-2024\n\n"
