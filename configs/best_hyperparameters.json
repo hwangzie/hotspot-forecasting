@@ -1,17 +1,17 @@
 {
   "n_lstm_layers": 1,
   "lstm_units": [
-    256
+    192
   ],
   "dropout_rates": [
-    0.5
+    0.2
   ],
   "batch_norm": [
     false
   ],
-  "l2_reg": 5.980504025139564e-05,
-  "add_dense_layer": true,
-  "dense_units": 128,
-  "dense_dropout": 0.1,
-  "learning_rate": 0.0017539911062958698
+  "l2_reg": 1e-05,
+  "add_dense_layer": false,
+  "dense_units": null,
+  "dense_dropout": null,
+  "learning_rate": 0.01
 }
